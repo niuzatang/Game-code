@@ -1,0 +1,32 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class GoalkeeperCaught : MonoBehaviour
+{
+    private Rigidbody goalkeeperRb;
+
+    public float time = 0;
+    public float timeLimit = 1;
+
+    float force = 3;
+    // Start is called before the first frame update
+    void Start()
+    {
+        goalkeeperRb = GetComponent<Rigidbody>();
+        goalkeeperRb.AddForce(new Vector3(0, 1, 0) * force, ForceMode.Impulse);
+        StartCoroutine(waiter());
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+
+    IEnumerator waiter()
+    {
+        yield return new WaitForSeconds(1);
+        Destroy(gameObject);
+    }
+}
