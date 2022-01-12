@@ -1,0 +1,37 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class SFXPlayer : MonoBehaviour
+{
+    public AudioClip goalSound;
+    public AudioClip perfectGoalSound;
+    public AudioClip ballSound;
+    public AudioClip failSound;
+    private AudioSource playerAudio;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        playerAudio = GetComponent<AudioSource>();
+        //playerAudio.PlayOneShot(perfectGoalSound, 1);
+        //Debug.Log("Sound played");
+    }
+
+    public void PlaySFX(string command)
+    {
+        if (command == "goalSound")
+        {
+            playerAudio.PlayOneShot(goalSound, 1);
+        } else if (command == "perfectGoalSound")
+        {
+            playerAudio.PlayOneShot(perfectGoalSound, 1);
+        } else if (command == "ballSound")
+        {
+            playerAudio.PlayOneShot(ballSound, 1);
+        } else if (command == "failSound")
+        {
+            playerAudio.PlayOneShot(failSound, 1);
+        }
+    }
+}
