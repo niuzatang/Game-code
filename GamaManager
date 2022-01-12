@@ -1,0 +1,321 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using TMPro;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using GoogleMobileAds.Api;
+
+public class GameManager : MonoBehaviour
+{
+    public GameObject titleScreen;
+    public GameObject gameOverScreen;
+    public GameObject controlScreen;
+    public GameObject shopScreen;
+    public GameObject soccerPrefab;
+    public GameObject arrowPrefab;
+    public GameObject goalkeeperPrefab;
+    public GameObject superPowerButton;
+    public GameObject powerAnimation;
+    public GameObject strikePrefab;
+    public SFXPlayer sfxPlayer;
+    public GameObject life1;
+    public GameObject life2;
+    public GameObject life3;
+    public GameObject block1;
+    public GameObject block2;
+    public GameObject block3;
+    public GameObject block4;
+    public GameObject block5;
+    public TextMeshProUGUI powerText;
+    public TextMeshProUGUI scoreText;
+    public TextMeshProUGUI lifeText;
+    public TextMeshProUGUI coinText;
+    public TextMeshProUGUI heatText;
+    public TextMeshProUGUI highScoreText;
+    public int score = 0;
+    public int life;
+    public int roundNumber = 1;
+    public int soccerCount;
+    public int goalKeeperCount;
+    public int strikeCount;
+    public int strikeConserv = 0;
+    public bool isGameActive;
+    public bool getCoin;
+    public bool spawnPowerup = false;
+    public int resetScore;
+    public bool spawnShrinked;
+    public bool slowTime;
+    public float spawnRangeX = 5;
+    public float spawnRangeY = 0.5f;
+    public int highestScore = 0;
+
+    private BannerView bannerView;
+    private InterstitialAd interstitial;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        LoadPlayer();
+        sfxPlayer = GameObject.FindGameObjectWithTag("SFX Player").GetComponent<SFXPlayer>();
+        // Initialize the Google Mobile Ads SDK.
+        MobileAds.Initialize(initStatus => { });
+
+        this.RequestBanner();
+        RequestInterstitial();
+
+        life = 3;
+        score = 0;
+        isGameActive = false;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (life == 0 && isGameActive == true)
+        {
+            GameOver();
+        }
+        soccerCount = GameObject.FindGameObjectsWithTag("Soccer").Length;
+        goalKeeperCount = GameObject.FindGameObjectsWithTag("Goalkeeper").Length;
+        strikeCount = GameObject.FindGameObjectsWithTag("Strike").Length;
+        if (soccerCount == 0 && isGameActive == true)
+        {
+                Instantiate(soccerPrefab, new Vector3(0, 0, 0), soccerPrefab.transform.rotation);
+                Instantiate(arrowPrefab, new Vector3(0, -0.4f, 1), arrowPrefab.transform.rotation);
+                roundNumber++;
+        }
+        if (strikeCount == 0 && isGameActive == true)
+        {
+            Instantiate(strikePrefab, GenerateSpawnPosition(), transform.rotation);
+        }
+
+        if (goalKeeperCount == 0 && isGameActive == true)
+        {
+            Instantiate(goalkeeperPrefab, new Vector3(0, 1.9f, 15), goalkeeperPrefab.transform.rotation);
+        }
+    }
+    private void RequestBanner()
+    {
+        string adUnitId = "ca-app-pub-2703618916315017/3992176477";
+        // Create a 320x50 banner at the top of the screen.
+        this.bannerView = new BannerView(adUnitId, AdSize.SmartBanner, AdPosition.Bottom);
+
+        // Create an empty ad request.
+        AdRequest request = new AdRequest.Builder().Build();
+
+        // Load the banner with the request.
+        this.bannerView.LoadAd(request);
+    }
+
+    private void RequestInterstitial()
+    {
+        string adUnitId = "ca-app-pub-2703618916315017/9284650156";
+
+        // Initialize an InterstitialAd.
+        this.interstitial = new InterstitialAd(adUnitId);
+        // Create an empty ad request.
+        AdRequest request = new AdRequest.Builder().Build();
+        // Load the interstitial with the request.
+        this.interstitial.LoadAd(request);
+    }
+
+    public void SavePlayer()
+    {
+        SaveSystem.SavePlayer(this);
+    }
+
+    public void LoadPlayer()
+    {
+        PlayerData data = SaveSystem.LoadPlayer();
+        highestScore = data.highScore;
+        UpdateHighest(highestScore);
+        UnlockEffects();
+    }
+
+    private Vector3 GenerateSpawnPosition()
+    {
+        float spawnPosX = Random.Range(-spawnRangeX, spawnRangeX);
+        float spawnPosY = Random.Range(1, 5);
+
+        Vector3 randomPos = new Vector3(spawnPosX, spawnPosY, 18);
+
+        return randomPos;
+    }
+
+
+    public void StartGame()
+    {
+        life = 3;
+        titleScreen.gameObject.SetActive(false);
+        controlScreen.gameObject.SetActive(true);
+        isGameActive = true;
+        UpdateLife(0);
+    }
+
+    public void ReturnToTitle()
+    {
+        isGameActive = false;
+        gameOverScreen.gameObject.SetActive(false);
+        titleScreen.gameObject.SetActive(true);
+    }
+
+    public void OpenShop()
+    {
+        titleScreen.gameObject.SetActive(false);
+        shopScreen.gameObject.SetActive(true);
+    }
+
+    public void CloseShop()
+    {
+        shopScreen.gameObject.SetActive(false);
+        titleScreen.gameObject.SetActive(true);
+    }
+
+    public void PowerDisplay(double power)
+    {
+        // powerText.gameObject.SetActive(true);
+        //powerText.text = "Pow:\n" + power.ToString("#");
+        // powerText.gameObject.SetActive(false);
+    }
+    
+    // This void turn on and off the power text
+    public void OnOffPower(bool powerOn)
+    {
+        if (powerOn == true)
+        {
+            //powerText.gameObject.SetActive(true);
+            powerAnimation.gameObject.SetActive(true);
+        } else if (powerOn == false)
+        {
+            //powerText.gameObject.SetActive(false);
+            powerAnimation.gameObject.SetActive(false);
+        }
+    }
+
+    public void UpdateScore()
+    {
+        strikeConserv = 0;
+        score += 1;
+        scoreText.text = "Score: " + score;
+        UpdateHighest(score);
+    }
+
+    public void StrikeScore()
+    {
+        strikeConserv += 2;
+        if (strikeConserv > 10)
+        {
+            strikeConserv = 10;
+        }
+        score += strikeConserv;
+        scoreText.text = "Score: " + score;
+        UpdateHighest(score);
+    }
+
+    public void UpdateLife(int lifeValue)
+    {
+        life -= lifeValue;
+        strikeConserv = 0;
+        if (life == 3)
+        {
+            life1.gameObject.SetActive(true);
+            life2.gameObject.SetActive(true);
+            life3.gameObject.SetActive(true);
+        } else if (life == 2)
+        {
+            life1.gameObject.SetActive(true);
+            life2.gameObject.SetActive(true);
+            life3.gameObject.SetActive(false);
+        } else if (life == 1)
+        {
+            life1.gameObject.SetActive(true);
+            life2.gameObject.SetActive(false);
+            life3.gameObject.SetActive(false);
+        } else if (life == 0)
+        {
+            life1.gameObject.SetActive(false);
+            life2.gameObject.SetActive(false);
+            life3.gameObject.SetActive(false);
+        }
+        lifeText.text = "Life: " + life;
+    }
+
+    public void UpdateHighest(int score)
+    {
+        if (score > highestScore)
+        {
+            highestScore = score;
+        }
+        highScoreText.text = "Highest: " + highestScore;
+    }
+
+    void SpawnSoccer()
+    {
+        Instantiate(soccerPrefab, new Vector3(0, 0, 0), soccerPrefab.transform.rotation);
+        Instantiate(arrowPrefab, new Vector3(0, -0.4f, 0), arrowPrefab.transform.rotation);
+    }
+
+    void GameOver()
+    {
+        controlScreen.gameObject.SetActive(false);
+        gameOverScreen.gameObject.SetActive(true);
+        Debug.Log("Game Over");
+        SavePlayer();
+        UnlockEffects();
+        isGameActive = false;
+
+        Destroy(GameObject.FindWithTag("Soccer"));
+        Destroy(GameObject.FindWithTag("Goalkeeper"));
+        Destroy(GameObject.FindWithTag("Strike"));
+        score = -1;
+        UpdateScore();
+        life = 0;
+        if (this.interstitial.IsLoaded())
+        {
+            this.interstitial.Show();
+        }
+        RequestInterstitial();
+        UpdateLife(0);
+    }
+
+    public void Restart()
+    {
+        gameOverScreen.gameObject.SetActive(false);
+        controlScreen.gameObject.SetActive(true);
+        score = 0;
+        life = 3;
+        roundNumber = 0;
+        isGameActive = true;
+        UpdateLife(0);
+    }
+
+    public void DeactivateSPButton()
+    {
+        superPowerButton.SetActive(false);
+    }
+
+    public void UnlockEffects()
+    {
+        if (highestScore >= 10)
+        {
+            block1.gameObject.SetActive(false);
+        }
+        if (highestScore >= 20)
+        {
+            block2.gameObject.SetActive(false);
+        }
+        if (highestScore >= 40)
+        {
+            block3.gameObject.SetActive(false);
+        }
+        if (highestScore >= 70)
+        {
+            block4.gameObject.SetActive(false);
+        }
+        if (highestScore >= 100)
+        {
+            block5.gameObject.SetActive(false);
+        }
+    }
+}
