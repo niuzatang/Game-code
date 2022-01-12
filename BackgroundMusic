@@ -1,0 +1,53 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using TMPro;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+public class BackgroundMusic : MonoBehaviour
+{
+    // public AudioClip bgMusic;
+    public List<AudioClip> music;
+    public int musicNum;
+    private AudioSource BGM;
+    public TextMeshProUGUI musicText;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        BGM = GetComponent<AudioSource>();
+        BGM.clip = music[0];
+        BGM.Play();
+    }
+    
+    public void ChangeMusic(string command)
+    {
+        if (command == "left")
+        {
+            musicNum -= 1;
+            if (musicNum == -1)
+            {
+                musicNum = 10;
+            }
+        }
+
+        if (command == "right")
+        {
+            musicNum += 1;
+            if (musicNum == 11)
+            {
+                musicNum = 0;
+            }
+        }
+
+        if (musicNum == 10)
+        {
+            musicText.text = "Stop";
+        }
+        BGM.Stop();
+        BGM.clip = music[musicNum];
+        BGM.Play();
+        musicText.text = "Music No. " + (musicNum + 1);
+    }
+}
