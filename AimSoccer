@@ -1,0 +1,294 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class AimSoccer : MonoBehaviour
+{
+    private static GameManager gameManager;
+
+    // Angle of the ball
+    public float XAngle;
+    public float YAngle;
+
+    // Count number of clicks
+    public float clickCount = 0;
+
+    // Stop speed
+    public float stopSpeed = 0.73f;
+
+    // Kick force
+    public float kickForce = 1.0f;
+    public float power = 50;
+
+    // Cooldown time
+    private float coolDuration = 0.1f;
+
+    private Rigidbody playerRb;
+
+    private Touch theTouch;
+
+    // Cooldown between touches
+    public float coolDown = 0.1f;
+
+    // Max and min angle
+    private float YAngleMin = 330;
+    private float YAngleMax = 30;
+    private float XAngleMin = 0;
+    private float XAngleMax = 330;
+
+    // For void AimLeftRight
+    private bool goRight = true;
+    private bool goLeft = false;
+
+    // For void AimUpDown
+    private bool goUp = true;
+    private bool goDown = false;
+
+    // For void ChoosePower
+    private float maxPower = 150;
+    private float minPower = 50;
+    private bool addPower = true;
+    private bool reducePower = false;
+
+    // For void KickBall
+    private bool kicked = false;
+
+    public int pointValue = 1;
+
+    public int lifeValue = 1;
+
+    public float movingTimeLimit;
+
+    public int traceNum;
+
+    public static float slowValue = 1;
+    static Vector3 ballSize = new Vector3(4, 4, 4);
+
+    public SFXPlayer sfxPlayer;
+    public ParticleSystem confettiParticle;
+    public Transform soccerBall;
+    public List<GameObject> ballTraces;
+    public GameObject ballTrace;
+    //public AudioClip ballSound;
+    //private AudioSource playerAudio;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        sfxPlayer = GameObject.FindGameObjectWithTag("SFX Player").GetComponent<SFXPlayer>();
+        //playerAudio = GetComponent<AudioSource>();
+        movingTimeLimit = 0;
+        gameManager = GameObject.FindGameObjectWithTag("Game Manager").GetComponent<GameManager>();
+        playerRb = GetComponent<Rigidbody>();
+        power = 50;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        transform.localScale = ballSize;
+        // Touch detector
+        if (Input.touchCount > 0 && coolDown <= coolDuration)
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.touches[0].position);
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit))
+            {
+                if (Input.touchCount > 0 && coolDown <= 0 && hit.collider.tag != "Touch Not Working")
+                {
+                    sfxPlayer.PlaySFX("ballSound");
+                    clickCount += 1;
+                    coolDown += 0.25f;
+                }
+            }
+        }
+
+        // Cooldown between touches
+        if (coolDown >= 0)
+        {
+            coolDown -= Time.deltaTime;
+        }
+
+        // Click control
+        if (clickCount == 0)
+        {
+            AimLeftRight();
+        }
+        else if (clickCount == 1)
+        {
+            AimUpDown();
+        }
+        else if (clickCount == 2)
+        {
+            gameManager.OnOffPower(true);
+            ChoosePower();
+        }
+        else if (clickCount == 3)
+        {
+            movingTimeLimit += Time.deltaTime;
+            if (movingTimeLimit >= 4)
+            {
+                Destroy(gameObject);
+                ballSize = new Vector3(4, 4, 4);
+                gameManager.UpdateLife(lifeValue);
+            }
+
+            gameManager.OnOffPower(false);
+            KickBall();
+            ballTraces[traceNum].gameObject.SetActive(true);
+        }
+        else if (clickCount > 3)
+        {
+            movingTimeLimit += Time.deltaTime;
+            if (movingTimeLimit >= 4)
+            {
+                Destroy(gameObject);
+                ballSize = new Vector3(4, 4, 4);
+                gameManager.UpdateLife(lifeValue);
+            }
+        }
+    }
+
+    public static void SlowdownTime()
+    {
+        slowValue = 2;
+    }
+
+    public static void ShrinkSoccer()
+    {
+        Debug.Log("Shrink ball spawned.");
+        ballSize = new Vector3(2, 2, 2);
+    }
+    void AimLeftRight()
+    {
+        YAngle = transform.localEulerAngles.y;
+
+        // private float YAngleMin = 310;
+        // private float YAngleMax = 50;
+
+        if ((YAngle <= YAngleMax || YAngle >= YAngleMin - 10) && goRight == true)
+        {
+            transform.Rotate(Vector3.up * 60 * (Time.deltaTime / slowValue));
+        }
+        else if (YAngle >= YAngleMax)
+        {
+            goRight = false;
+            goLeft = true;
+        }
+
+        if ((YAngle >= YAngleMin || YAngle <= YAngleMax + 10) && goLeft == true)
+        {
+            transform.Rotate(Vector3.down * 60 * (Time.deltaTime / slowValue));
+        }
+        else if (YAngle <= YAngleMin)
+        {
+            goLeft = false;
+            goRight = true;
+        }
+    }
+
+    void AimUpDown()
+    {
+        XAngle = transform.localEulerAngles.x;
+
+        // private float XAngleMin = 0;
+        // private float XAngleMax = 310;
+
+        if ((XAngle >= XAngleMax || XAngle <= XAngleMin + 10) && goUp == true)
+        {
+            transform.Rotate(Vector3.left * 50 * (Time.deltaTime / slowValue));
+        }
+        else if (XAngle <= XAngleMax)
+        {
+            goUp = false;
+            goDown = true;
+        }
+
+        if ((XAngle <= XAngleMin || XAngle >= XAngleMax - 10) && goDown == true)
+        {
+            transform.Rotate(Vector3.right * 50 * (Time.deltaTime / slowValue));
+        }
+        else if (XAngle <= XAngleMin + 10)
+        {
+            goDown = false;
+            goUp = true;
+        }
+    }
+
+    void ChoosePower()
+    {
+        if (power <= maxPower && addPower == true)
+        {
+            power += 100 * (Time.deltaTime / slowValue);
+        }
+        else if (power > maxPower)
+        {
+            addPower = false;
+            reducePower = true;
+        }
+
+        if (power >= minPower && reducePower == true)
+        {
+            power -= 100 * (Time.deltaTime / slowValue);
+        }
+        else if (power < minPower)
+        {
+            reducePower = false;
+            addPower = true;
+        }
+        gameManager.PowerDisplay(power);
+    }
+
+    void KickBall()
+    {
+        slowValue = 1;
+        if (kicked == false)
+        {
+            if (YAngle >= 300)
+            {
+                YAngle -= 360;
+            }
+
+            if (XAngle <= 10)
+            {
+                XAngle = 359;
+            }
+
+            playerRb.AddForce(new Vector3(YAngle / 50, (360 - XAngle) / 50, 1) * power / 5, ForceMode.Impulse);
+            kicked = true;
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.CompareTag("Strike"))
+        {
+            Debug.Log("Strike hit");
+            sfxPlayer.PlaySFX("perfectGoalSound");
+            Instantiate(confettiParticle, transform.position, Quaternion.Euler(-90, 0, 0));
+            gameManager.StrikeScore();
+            Destroy(other.gameObject);
+            Destroy(gameObject);
+        } else if (other.gameObject.CompareTag("Out of Range"))
+        {
+            sfxPlayer.PlaySFX("failSound");
+            Destroy(gameObject);
+            gameManager.UpdateLife(1);
+        } else if (other.gameObject.CompareTag("Goal"))
+        {
+            sfxPlayer.PlaySFX("goalSound");
+            Instantiate(confettiParticle, transform.position, Quaternion.Euler(-90, 0, 0));
+            gameManager.UpdateScore();
+            Destroy(gameObject);
+        } else if (other.gameObject.CompareTag("Goalkeeper"))
+        {
+            sfxPlayer.PlaySFX("failSound");
+        }
+    }
+
+    public void ChangeTraceNum(int newTrace)
+    {
+        traceNum = newTrace;
+    }
+}
