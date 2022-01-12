@@ -1,0 +1,157 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class DirectionIndicator : MonoBehaviour
+{
+    // Angle of the ball
+    public float XAngle;
+    public float YAngle;
+
+    // Count number of clicks
+    public float clickCount = 0;
+
+    // Cooldown time
+    private float coolDuration = 0.25f;
+
+    private Touch theTouch;
+
+    // Cooldown between touches
+    public float coolDown = 0.25f;
+
+    // Max and min angle
+    private float YAngleMin = 330;
+    private float YAngleMax = 30;
+    private float XAngleMin = 0;
+    private float XAngleMax = 330;
+
+    // For void AimLeftRight
+    private bool goRight = true;
+    private bool goLeft = false;
+
+    // For void AimUpDown
+    private bool goUp = true;
+    private bool goDown = false;
+
+    public static float slowValue = 1;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        // Touch detector
+        if (Input.touchCount > 0 && coolDown <= coolDuration)
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.touches[0].position);
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit))
+            {
+                if (Input.touchCount > 0 && coolDown <= 0 && hit.collider.tag != "Touch Not Working")
+                {
+                    clickCount += 1;
+                    coolDown += 0.25f;
+                }
+            }
+        }
+
+        // Cooldown between touches
+        if (coolDown >= 0)
+        {
+            coolDown -= Time.deltaTime;
+        }
+
+        // Click control
+        if (clickCount == 0)
+        {
+            AimLeftRight();
+        }
+        else if (clickCount == 1)
+        {
+            AimUpDown();
+        } else if (clickCount == 3)
+        {
+            slowValue = 1;
+            Destroy(gameObject);
+        }
+
+    }
+
+    public static void SlowdownTime()
+    {
+        slowValue = 2;
+    }
+    void AimLeftRight()
+    {
+        YAngle = transform.localEulerAngles.y;
+
+        // private float YAngleMin = 310;
+        // private float YAngleMax = 50;
+
+        if ((YAngle <= YAngleMax || YAngle >= YAngleMin - 10) && goRight == true)
+        {
+            transform.Rotate(Vector3.up * 60 * (Time.deltaTime / slowValue));
+        }
+        else if (YAngle >= YAngleMax)
+        {
+            goRight = false;
+            goLeft = true;
+        }
+
+        if ((YAngle >= YAngleMin || YAngle <= YAngleMax + 10) && goLeft == true)
+        {
+            transform.Rotate(Vector3.down * 60 * (Time.deltaTime / slowValue));
+        }
+        else if (YAngle <= YAngleMin)
+        {
+            goLeft = false;
+            goRight = true;
+        }
+    }
+
+    void AimUpDown()
+    {
+        XAngle = transform.localEulerAngles.x;
+
+        // private float XAngleMin = 0;
+        // private float XAngleMax = 310;
+
+        if ((XAngle >= XAngleMax || XAngle <= XAngleMin + 10) && goUp == true)
+        {
+            transform.Rotate(Vector3.left * 50 * (Time.deltaTime / slowValue));
+        }
+        else if (XAngle <= XAngleMax)
+        {
+            goUp = false;
+            goDown = true;
+        }
+
+        if ((XAngle <= XAngleMin || XAngle >= XAngleMax - 10) && goDown == true)
+        {
+            transform.Rotate(Vector3.right * 50 * (Time.deltaTime / slowValue));
+        }
+        else if (XAngle <= XAngleMin + 10)
+        {
+            goDown = false;
+            goUp = true;
+        }
+    }
+    /* if (Input.touchCount > 0 && giveForce == true)
+        {
+            theTouch = Input.GetTouch(0);
+            playerRb.AddForce(Vector3.forward * kickForce, ForceMode.Impulse);
+            Debug.Log("moving");
+            giveForce = false;
+        }
+
+        // Stop the ball when it's slow.
+        if (playerRb.velocity.magnitude <= stopSpeed)
+        {
+            playerRb.velocity = Vector3.zero;
+        } */
+}
